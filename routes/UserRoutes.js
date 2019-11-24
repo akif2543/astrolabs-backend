@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 const User = require('../models/UserModel');
+const UserProfile = require('../models/UserProfileModel');
 const secret = 'Astrolabs';  //process.env.SECRET;
 
 router.post('/register', (req, res)=>{
@@ -76,5 +77,28 @@ router.post('/login', (req, res)=>{
     })
     .catch
 });
+
+router.post('/profile', (req, res)=>{
+    const formData = {
+        nickName : req.body.nickName,
+        profilePhoto : req.body.profilePhoto,
+        location : req.body.location,
+        occupation : req.body.occupation,
+        bio : req.body.bio,
+        cuisine : req.body.cuisine,
+        favoriteFood : req.body.favoriteFood,
+    }
+    const newUserProfile = new UserProfile(formData);
+    newUserProfile
+    .save()
+    .then((newFormData)=>{
+        res.json(newFormData)
+    })
+    .catch((err)=>{
+        console.log('error', err);
+    })
+});
+
+
 
 module.exports = router;
