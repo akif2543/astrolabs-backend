@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const passport = require('passport');
 const UserRoutes = require('./routes/UserRoutes');
+const FeedRoutes = require('./routes/FeedRoutes');
 
 const  initPassportStrategy = require('./config/passport');
 
@@ -27,6 +28,12 @@ mongoose
 app.use(
     '/user',
     UserRoutes
+);
+
+app.use(
+    '/feed',
+    //passport.authenticate('jwt', {session: false}),
+    FeedRoutes
 );
 
 app.listen(process.env.PORT || 3000, () => {

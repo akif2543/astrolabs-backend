@@ -3,7 +3,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 const User = require('../models/UserModel');
-const UserProfile = require('../models/UserProfileModel');
+const UserProfile = require('../models/ProfileModel');
+const Review = require('../models/ReviewModel');
 const secret = 'Astrolabs';  //process.env.SECRET;
 
 router.post('/register', (req, res)=>{
@@ -78,8 +79,8 @@ router.post('/login', (req, res)=>{
     .catch
 });
 
-router.post('/profile', (req, res)=>{
-    const formData = {
+router.post('/profile/edit', (req, res)=>{
+    const profileData = {
         nickName : req.body.nickName,
         profilePhoto : req.body.profilePhoto,
         location : req.body.location,
@@ -88,17 +89,35 @@ router.post('/profile', (req, res)=>{
         cuisine : req.body.cuisine,
         favoriteFood : req.body.favoriteFood,
     }
-    const newUserProfile = new UserProfile(formData);
+    const newUserProfile = new UserProfile(profileData);
     newUserProfile
     .save()
-    .then((newFormData)=>{
-        res.json(newFormData)
+    .then((newProfileData)=>{
+        res.json(newProfileData)
     })
     .catch((err)=>{
         console.log('error', err);
     })
 });
 
-
+router.post('/profile/review', (req, res)=>{
+    const reviewData = {
+        firstName : req.body.firstName,
+        profilePhoto : req.body.profilePhoto,
+        rating : req.body.rating,
+        review : req.body.review,
+        eventTitle : req.body.eventTitle,
+        eventDate : req.body.eventDate
+    }
+    const newReview = new Review(reviewData);
+    newReview
+    .save()
+    .then((newReviewData)=>{
+        res.json(newReviewData)
+    })
+    .catch((err)=>{
+        console.log('error', err);
+    })
+});
 
 module.exports = router;
