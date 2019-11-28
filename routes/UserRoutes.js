@@ -68,12 +68,12 @@ router.post('/login', (req, res)=>{
                         }
                     )
                 } else {
-                    res.json({message: "Incorrect password"})
+                    res.json({password: "Incorrect password"})
                 }
             })
             .catch
         } else {
-            res.json({message: "Invalid email"})
+            res.json({email: "Invalid email"})
         }
     })
     .catch

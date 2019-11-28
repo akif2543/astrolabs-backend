@@ -3,6 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const passport = require('passport');
+const cors = require('cors');
 const UserRoutes = require('./routes/UserRoutes');
 const FeedRoutes = require('./routes/FeedRoutes');
 
@@ -10,6 +11,7 @@ const  initPassportStrategy = require('./config/passport');
 
 const app = express();
 
+app.use(cors());
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 app.use(passport.initialize());
@@ -36,6 +38,6 @@ app.use(
     FeedRoutes
 );
 
-app.listen(process.env.PORT || 3000, () => {
+app.listen(process.env.PORT || 3001, () => {
     console.log('You are connected!')
 });
