@@ -3,28 +3,35 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const UserProfileSchema = new Schema({
-    nickName: {
+    userId: {
         type: String,
+        required: true
     },
     profilePhoto: {
         type: String,
-        required: true
+        required: true,
+        default: "https://previews.123rf.com/images/alexwhite/alexwhite1609/alexwhite160904796/62625444-cook-flat-design-yellow-round-web-icon.jpg"
     },
     location: {
         type: String,
-        required: true
+        required: true,
+        default: "City, Country"
     },
     occupation: {
-        type: String
+        type: String,
+        default: "What is your job?"
     },
     bio: {
-        type: String
+        type: String,
+        default: "Tell us a little about yourself."
     },
     cuisine: {
-        type: String
+        type: String,
+        default: "What cuisine is your specialty?"
     },
     favoriteFood: {
-        type: String
+        type: String,
+        default: "What are some of your favorite foods?"
     },
     followers: {
         type: Array,

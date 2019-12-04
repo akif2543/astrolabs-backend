@@ -7,6 +7,7 @@ const Recipe = require('../models/RecipeModel');
 router.post('/post', (req, res)=>{
     const postData = {
         userName : req.body.userName,
+        profilePhoto : req.body.profilePhoto,
         postBody : req.body.postBody,
         image : req.body.image
     }
@@ -26,8 +27,8 @@ router.post('/post', (req, res)=>{
 
 router.post('/post/like', async (req, res)=>{
     let userLikes;
-    let postID = req.body.postId;
-    let userID = req.body.userId;
+    let postID = req.body.postid;
+    let userID = req.user.id;
     
     let theDocument = await Post 
     .find({_id: postID})
@@ -57,8 +58,8 @@ router.post('/post/like', async (req, res)=>{
 
 router.post('/post/share', async (req, res)=>{
     let userShares;
-    let postID = req.body.postId;
-    let userID = req.body.userId;
+    let postID = req.body.postid;
+    let userID = req.user.id;
     
     let theDocument = await Post 
     .find({_id: postID})
@@ -91,6 +92,8 @@ router.post('/post/comment', async (req, res)=>{
     let postID = req.body.postId;
     let userID = req.body.userId;
     let comment = req.body.comment;
+
+
     
     let theDocument = await Post 
     .find({_id: postID})
@@ -99,7 +102,7 @@ router.post('/post/comment', async (req, res)=>{
     });
     
     userComments = theDocument[0].comments;
-    userComments.push({userID: comment});
+    userComments.push({'userID': userID, 'comment': comment, date: Date.now});
 
     Post
     .updateOne(

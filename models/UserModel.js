@@ -23,6 +23,19 @@ const UserSchema = new Schema({
         type: Date,
         default: Date.now
     }
-})
+}, {
+    toObject: {
+    virtuals: true
+    },
+    toJSON: {
+    virtuals: true 
+    }
+});
+
+UserSchema
+.virtual('userName')
+.get(function () {
+    return this.firstName + ' ' + this.lastName;
+});
 
 module.exports = User = mongoose.model('user', UserSchema);

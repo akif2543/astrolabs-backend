@@ -25,16 +25,53 @@ mongoose
 })
 .catch((err)=>{
     console.log('error', err)
-})
+});
+mongoose.set('useFindAndModify', false);
+
+app.get(
+    '/user/profile/view',
+    (req, res) => {
+        UserProfile.find()
+        .then((profile)=>{
+            res.json(profile);
+        })
+        .catch((err)=>{
+            console.log('error', err)
+        })
+});
 
 app.use(
     '/user',
     UserRoutes
 );
 
+app.get(
+    '/feed/post/all',
+    (req, res) => {
+        Post.find()
+        .then((users)=>{
+            res.json(users);
+        })
+        .catch((err)=>{
+            console.log('error', err)
+        })
+});
+
+app.get(
+    '/feed/recipe/all',
+    (req, res) => {
+        Recipe.find()
+        .then((users)=>{
+            res.json(users);
+        })
+        .catch((err)=>{
+            console.log('error', err)
+        })
+});
+
 app.use(
     '/feed',
-    //passport.authenticate('jwt', {session: false}),
+    passport.authenticate('jwt', {session: false}),
     FeedRoutes
 );
 

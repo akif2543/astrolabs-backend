@@ -58,13 +58,14 @@ router.post('/login', (req, res)=>{
                 if (isMatch) {
                     const payload = {
                         id: theUser.id,
-                        email: theUser.email
+                        email: theUser.email,
+                        userName: theUser.userName
                     }
                     jwt.sign(
                         payload,
                         secret,
                         (err, theJWT) => {
-                            res.json({token: theJWT})
+                            res.json({token: theJWT, id: theUser.id, userName: theUser.userName})
                         }
                     )
                 } else {
@@ -79,9 +80,9 @@ router.post('/login', (req, res)=>{
     .catch
 });
 
-router.post('/profile/edit', (req, res)=>{
+router.post('/profile', (req, res)=>{
     const profileData = {
-        nickName : req.body.nickName,
+        userId : req.body.userId,
         profilePhoto : req.body.profilePhoto,
         location : req.body.location,
         occupation : req.body.occupation,
@@ -97,6 +98,36 @@ router.post('/profile/edit', (req, res)=>{
     })
     .catch((err)=>{
         console.log('error', err);
+    })
+});
+
+router.post('/profile/view', (req, res)=>{
+
+    const userId = req.body.userId;
+    
+    UserProfile
+    .findOne({userId: userId})
+    .then((profile)=>{
+        res.json(profile)
+    })
+});
+
+router.post('/profile/update', (req, res)=>{
+    const profileData = {
+        userId : req.body.userId,
+        profilePhoto : req.body.profilePhoto,
+        location : req.body.location,
+        occupation : req.body.occupation,
+        bio : req.body.bio,
+        cuisine : req.body.cuisine,
+        favoriteFood : req.body.favoriteFood,
+    }
+    UserProfile
+    .findOneAndUpdate({userId: profileData.userId}, profileData, {
+        new: true
+      })
+    .then((profile)=>{
+        res.json(profile)
     })
 });
 
