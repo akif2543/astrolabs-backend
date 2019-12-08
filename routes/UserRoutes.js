@@ -80,6 +80,38 @@ router.post('/login', (req, res)=>{
     .catch
 });
 
+router.post('/edit', (req, res)=>{
+
+    const userId = req.body.userId;
+    
+    User
+    .findOne({_id: userId})
+    .then((user)=>{
+        res.json(user)
+    })
+    .catch((err)=>{
+        console.log('error', err);
+    })
+})
+
+router.post('/update', (req, res)=>{
+    const formData = {
+        firstName : req.body.firstName,
+        lastName : req.body.lastName,
+        email : req.body.email,
+        password : req.body.password,
+        _id : req.body._id
+    }
+
+    User
+    .findOneAndUpdate({_id: formData._id}, formData, {
+        new: true
+      })
+    .then((user)=>{
+        res.json(user)
+    })
+});
+
 router.post('/profile', (req, res)=>{
     const profileData = {
         userId : req.body.userId,

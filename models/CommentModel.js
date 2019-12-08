@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const Schema = mongoose.Schema;
 
-const PostSchema = new Schema({
+const CommentSchema = new Schema({
     userName: {
         type: String,
         required: true
@@ -11,27 +11,17 @@ const PostSchema = new Schema({
         type: String,
         requiired: true
     },
-    postBody: {
+    commentBody: {
         type: String,
         required: true
-    },
-    image: {
-        type: String
     },
     likes: {
         type: Array,
         default: []
     },
-    shares: {
-        type: Array,
-        default: []
+    postId: {
+        type: String
     },
-    comments: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'comment', //or any other collection
-        }
-    ],
     date: {
         type: Date,
         default: Date.now
@@ -96,11 +86,10 @@ function formatDate(date) {
     return `${hourString}:${minutesString} on ${dayString} ${monthWord(month)} ${date.getFullYear()}`;
 };
 
-/* >= 10 ? month : `0${month}`; */
-PostSchema
+CommentSchema
 .virtual('formatDate')
 .get(function () {
     return formatDate(this.date)
 });
 
-module.exports = Post = mongoose.model('post', PostSchema);
+module.exports = Comment = mongoose.model('comment', CommentSchema);

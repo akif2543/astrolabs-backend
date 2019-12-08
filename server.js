@@ -40,15 +40,34 @@ app.get(
         })
 });
 
+app.get(
+    '/user/edit',
+    (req, res) => {
+        User.find()
+        .then((user)=>{
+            res.json(user);
+        })
+        .catch((err)=>{
+            console.log('error', err)
+        })
+});
+
 app.use(
     '/user',
     UserRoutes
 );
 
-app.get(
+app.post(
     '/feed/post/all',
     (req, res) => {
-        Post.find()
+
+        const timestamp = req.body.timestamp;
+        const dateFilter = timestamp ? { date: {$lt: new Date (timestamp)} } : null;
+
+        Post
+        .find(dateFilter)
+        .sort({date: -1})
+        .limit(5)
         .then((users)=>{
             res.json(users);
         })
@@ -57,7 +76,19 @@ app.get(
         })
 });
 
-app.get(
+app.post("/feed/post/comment/view", (req, res) => {
+    const postId = req.body.postId;
+
+    Post
+    .findOne({_id: postId})
+    .populate('comments')
+    .exec(function (err, post) {
+        if (err) return handleError(err);
+        res.json(post.comments);
+    })
+});
+
+/* app.get(
     '/feed/recipe/all',
     (req, res) => {
         Recipe.find()
@@ -67,7 +98,7 @@ app.get(
         .catch((err)=>{
             console.log('error', err)
         })
-});
+}); */
 
 app.use(
     '/feed',
