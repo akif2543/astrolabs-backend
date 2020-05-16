@@ -1,26 +1,26 @@
 const express = require("express");
 const router = express.Router();
 const Post = require("../models/PostModel");
-const Comment = require("../models/CommentModel");
-const Event = require("../models/EventModel");
-const Recipe = require("../models/RecipeModel");
+// const Comment = require("../models/CommentModel");
+const UserProfile = require("../models/ProfileModel");
+// const Recipe = require("../models/RecipeModel");
 
 router.post("/post", (req, res) => {
   const postData = {
     userName: req.body.userName,
     profilePhoto: req.body.profilePhoto,
     postBody: req.body.postBody,
-    image: req.body.image
+    image: req.body.image,
   };
 
   const newPost = new Post(postData);
 
   newPost
     .save()
-    .then(newPostData => {
+    .then((newPostData) => {
       res.json(newPostData);
     })
-    .catch(err => {
+    .catch((err) => {
       console.log("error", err);
     });
 });
@@ -30,7 +30,7 @@ router.post("/post/like", async (req, res) => {
   let postID = req.body.postid;
   let userID = req.user.id;
 
-  let theDocument = await Post.find({ _id: postID }).catch(err => {
+  let theDocument = await Post.find({ _id: postID }).catch((err) => {
     res.json(err);
   });
 
@@ -43,10 +43,10 @@ router.post("/post/like", async (req, res) => {
   }
 
   Post.updateOne({ _id: postID }, { likes: userLikes })
-    .then(thePost => {
+    .then((thePost) => {
       res.json(thePost);
     })
-    .catch(err => {
+    .catch((err) => {
       res.json(err);
     });
 });
@@ -56,7 +56,7 @@ router.post("/post/share", async (req, res) => {
   let postID = req.body.postid;
   let userID = req.user.id;
 
-  let theDocument = await Post.find({ _id: postID }).catch(err => {
+  let theDocument = await Post.find({ _id: postID }).catch((err) => {
     res.json(err);
   });
 
@@ -69,47 +69,53 @@ router.post("/post/share", async (req, res) => {
   }
 
   Post.updateOne({ _id: postID }, { shares: userShares })
-    .then(thePost => {
+    .then((thePost) => {
       res.json(thePost);
     })
-    .catch(err => {
+    .catch((err) => {
       res.json(err);
     });
 });
 
-router.post("/post/comment", async (req, res) => {
-  
-    const commentData = {
-    userName: req.body.userName,
-    profilePhoto: req.body.profilePhoto,
-    commentBody: req.body.commentBody,
-    postId: req.body.postId
+router.post("/post/:id/comment", async (req, res) => {
+  const commentData = {
+    userId: req.user.id,
+    body: req.body.body,
   };
 
-  const newComment = await new Comment(commentData);
+  const userProfileId = (await UserProfile.findOne({ userId: req.user.id }))
+    ._id;
 
-  newComment
-    .save()
-    .then(newCommentData => {
-      res.json(newCommentData);
-      commentId = newCommentData._id
-    })
-    .then(json => {
-      Post.findOne({ _id: commentData.postId })
-        .then(post => {
-          post.comments.push(commentId);
-          post.save();
-        })
-        .catch(err => {
-          console.log("error", err);
-        });
-    })
-    .catch(err => {
-      console.log("error", err);
-    });
+  commentData.userProfileId = userProfileId;
+
+  const post = await Post.findOneAndUpdate(
+    { _id: req.params.id },
+    { $push: { comments: commentData } },
+    { new: true }
+  );
+  res.json(post);
+
+  // const newComment = await new Comment(commentData);
+  // newComment
+  //   .save()
+  //   .then(newCommentData => {
+  //     res.json(newCommentData);
+  //     commentId = newCommentData._id
+  //   })
+  //   .then(json => {
+  //     Post.findOne({ _id: commentData.postId })
+  //       .then(post => {
+  //         post.comments.push(commentId);
+  //         post.save();
+  //       })
+  //       .catch(err => {
+  //         console.log("error", err);
+  //       });
+  //   })
+  //   .catch(err => {
+  //     console.log("error", err);
+  //   });
 });
-
-
 
 router.post("/event", (req, res) => {
   const eventData = {
@@ -119,17 +125,17 @@ router.post("/event", (req, res) => {
     eventLocation: req.body.eventLocation,
     eventDate: req.body.eventDate,
     category: req.body.category,
-    image: req.body.image
+    image: req.body.image,
   };
 
   const newEvent = new Event(eventData);
 
   newEvent
     .save()
-    .then(newEventData => {
+    .then((newEventData) => {
       res.json(newEventData);
     })
-    .catch(err => {
+    .catch((err) => {
       console.log("error", err);
     });
 });
@@ -139,7 +145,7 @@ router.post("/event/like", async (req, res) => {
   let eventID = req.body.eventId;
   let userID = req.body.userId;
 
-  let theDocument = await Event.find({ _id: eventID }).catch(err => {
+  let theDocument = await Event.find({ _id: eventID }).catch((err) => {
     res.json(err);
   });
 
@@ -152,10 +158,10 @@ router.post("/event/like", async (req, res) => {
   }
 
   Event.updateOne({ _id: eventID }, { likes: userLikes })
-    .then(theEvent => {
+    .then((theEvent) => {
       res.json(theEvent);
     })
-    .catch(err => {
+    .catch((err) => {
       res.json(err);
     });
 });
@@ -165,7 +171,7 @@ router.post("/event/share", async (req, res) => {
   let eventID = req.body.eventId;
   let userID = req.body.userId;
 
-  let theDocument = await Event.find({ _id: eventID }).catch(err => {
+  let theDocument = await Event.find({ _id: eventID }).catch((err) => {
     res.json(err);
   });
 
@@ -178,10 +184,10 @@ router.post("/event/share", async (req, res) => {
   }
 
   Event.updateOne({ _id: eventID }, { shares: userShares })
-    .then(theEvent => {
+    .then((theEvent) => {
       res.json(theEvent);
     })
-    .catch(err => {
+    .catch((err) => {
       res.json(err);
     });
 });
@@ -191,7 +197,7 @@ router.post("/event/attend", async (req, res) => {
   let eventID = req.body.eventId;
   let userID = req.body.userId;
 
-  let theDocument = await Event.find({ _id: eventID }).catch(err => {
+  let theDocument = await Event.find({ _id: eventID }).catch((err) => {
     res.json(err);
   });
 
@@ -204,10 +210,10 @@ router.post("/event/attend", async (req, res) => {
   }
 
   Event.updateOne({ _id: eventID }, { attending: usersAttending })
-    .then(theEvent => {
+    .then((theEvent) => {
       res.json(theEvent);
     })
-    .catch(err => {
+    .catch((err) => {
       res.json(err);
     });
 });
@@ -218,7 +224,7 @@ router.post("/event/comment", async (req, res) => {
   let userID = req.body.userId;
   let comment = req.body.comment;
 
-  let theDocument = await Event.find({ _id: eventID }).catch(err => {
+  let theDocument = await Event.find({ _id: eventID }).catch((err) => {
     res.json(err);
   });
 
@@ -226,10 +232,10 @@ router.post("/event/comment", async (req, res) => {
   userComments.push({ userID: comment });
 
   Event.updateOne({ _id: eventID }, { comments: userComments })
-    .then(theEvent => {
+    .then((theEvent) => {
       res.json(theEvent);
     })
-    .catch(err => {
+    .catch((err) => {
       res.json(err);
     });
 });
@@ -244,17 +250,17 @@ router.post("/recipe", (req, res) => {
     ingredientList: req.body.ingredientList,
     recipeDirections: req.body.recipeDirections,
     tags: req.body.tags,
-    image: req.body.image
+    image: req.body.image,
   };
 
   const newRecipe = new Recipe(recipeData);
 
   newRecipe
     .save()
-    .then(newRecipeData => {
+    .then((newRecipeData) => {
       res.json(newRecipeData);
     })
-    .catch(err => {
+    .catch((err) => {
       console.log("error", err);
     });
 });
@@ -264,7 +270,7 @@ router.post("/recipe/like", async (req, res) => {
   let recipeID = req.body.recipeId;
   let userID = req.body.userId;
 
-  let theDocument = await Recipe.find({ _id: recipeID }).catch(err => {
+  let theDocument = await Recipe.find({ _id: recipeID }).catch((err) => {
     res.json(err);
   });
 
@@ -277,10 +283,10 @@ router.post("/recipe/like", async (req, res) => {
   }
 
   Recipe.updateOne({ _id: recipeID }, { likes: userLikes })
-    .then(theRecipe => {
+    .then((theRecipe) => {
       res.json(theRecipe);
     })
-    .catch(err => {
+    .catch((err) => {
       res.json(err);
     });
 });
@@ -290,7 +296,7 @@ router.post("/recipe/share", async (req, res) => {
   let recipeID = req.body.recipeId;
   let userID = req.body.userId;
 
-  let theDocument = await Recipe.find({ _id: recipeID }).catch(err => {
+  let theDocument = await Recipe.find({ _id: recipeID }).catch((err) => {
     res.json(err);
   });
 
@@ -303,10 +309,10 @@ router.post("/recipe/share", async (req, res) => {
   }
 
   Recipe.updateOne({ _id: recipeID }, { shares: userShares })
-    .then(theRecipe => {
+    .then((theRecipe) => {
       res.json(theRecipe);
     })
-    .catch(err => {
+    .catch((err) => {
       res.json(err);
     });
 });
@@ -317,7 +323,7 @@ router.post("/recipe/comment", async (req, res) => {
   let userID = req.body.userId;
   let comment = req.body.comment;
 
-  let theDocument = await Recipe.find({ _id: recipeID }).catch(err => {
+  let theDocument = await Recipe.find({ _id: recipeID }).catch((err) => {
     res.json(err);
   });
 
@@ -325,10 +331,10 @@ router.post("/recipe/comment", async (req, res) => {
   userComments.push({ userID: comment });
 
   Recipe.updateOne({ _id: recipeID }, { comments: userComments })
-    .then(theRecipe => {
+    .then((theRecipe) => {
       res.json(theRecipe);
     })
-    .catch(err => {
+    .catch((err) => {
       res.json(err);
     });
 });
