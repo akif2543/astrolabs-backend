@@ -1,41 +1,54 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
+const uniqueValidator = require("mongoose-unique-validator");
 
 const Schema = mongoose.Schema;
 
-const UserSchema = new Schema({
+const UserSchema = new Schema(
+  {
     firstName: {
-        type: String,
-        require: true
+      type: String,
+      require: true,
     },
     lastName: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
+    },
+    handle: {
+      type: String,
+      required: true,
+      minlength: 3,
+      unique: true,
     },
     email: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
+      unique: true,
     },
     password: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     date: {
-        type: Date,
-        default: Date.now
-    }
-}, {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    timestamps: true,
     toObject: {
-    virtuals: true
+      virtuals: true,
     },
     toJSON: {
-    virtuals: true 
-    }
+      virtuals: true,
+    },
+  }
+);
+
+UserSchema.plugin(uniqueValidator);
+
+UserSchema.virtual("userName").get(function () {
+  return this.firstName + " " + this.lastName;
 });
 
-UserSchema
-.virtual('userName')
-.get(function () {
-    return this.firstName + ' ' + this.lastName;
-});
-
-module.exports = User = mongoose.model('user', UserSchema);
+const User = mongoose.model("user", UserSchema);
+module.exports = User;

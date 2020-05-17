@@ -25,56 +25,34 @@ router.post("/post", (req, res) => {
     });
 });
 
-router.post("/post/like", async (req, res) => {
-  let userLikes;
-  let postID = req.body.postid;
-  let userID = req.user.id;
+router.put("/post/toggle", async (req, res) => {
+  const userId = req.user.id;
+  const { postId, like } = req.body;
 
-  let theDocument = await Post.find({ _id: postID }).catch((err) => {
-    res.json(err);
-  });
+  const post = await Post.findById(postId);
 
-  userLikes = theDocument[0].likes;
+  if (post) {
+    const { likes, shares } = post;
 
-  if (userLikes.includes(userID)) {
-    userLikes.splice(userLikes.indexOf(userID), 1);
+    if (like) {
+      if (likes.includes(userId)) {
+        likes.splice(likes.indexOf(userId), 1);
+      } else {
+        likes.push(userId);
+      }
+    } else {
+      if (shares.includes(userId)) {
+        shares.splice(shares.indexOf(userId), 1);
+      } else {
+        shares.push(userId);
+      }
+    }
+
+    const update = await Post.updateOne({ _id: postId }, { likes, shares });
+    res.status(200).json(update);
   } else {
-    userLikes.push(userID);
+    res.status(404).end();
   }
-
-  Post.updateOne({ _id: postID }, { likes: userLikes })
-    .then((thePost) => {
-      res.json(thePost);
-    })
-    .catch((err) => {
-      res.json(err);
-    });
-});
-
-router.post("/post/share", async (req, res) => {
-  let userShares;
-  let postID = req.body.postid;
-  let userID = req.user.id;
-
-  let theDocument = await Post.find({ _id: postID }).catch((err) => {
-    res.json(err);
-  });
-
-  userShares = theDocument[0].shares;
-
-  if (userShares.includes(userID)) {
-    userShares.splice(userShares.indexOf(userID), 1);
-  } else {
-    userShares.push(userID);
-  }
-
-  Post.updateOne({ _id: postID }, { shares: userShares })
-    .then((thePost) => {
-      res.json(thePost);
-    })
-    .catch((err) => {
-      res.json(err);
-    });
 });
 
 router.post("/post/:id/comment", async (req, res) => {

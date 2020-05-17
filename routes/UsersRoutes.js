@@ -1,25 +1,29 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const router = express.Router();
 const User = require("../models/UserModel");
 const UserProfile = require("../models/ProfileModel");
 const Review = require("../models/ReviewModel");
-const secret = "Astrolabs"; //process.env.SECRET;
+require("dotenv").config();
 
-router.get("/:id", async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (user) {
-    res.status(200).json(user.userName);
+const router = express.Router();
+const secret = process.env.SECRET;
+
+router.get("/", async (req, res) => {
+  const users = await User.find();
+  if (users.length) {
+    const userNames = users.map((user) => user.userName);
+    res.status(200).json(userNames);
   } else {
     res.status(404).end();
   }
 });
 
-router.post("/register", (req, res) => {
+router.post("/", (req, res) => {
   const formData = {
     firstName: req.body.firstName,
     lastName: req.body.lastName,
+    handle: req.body.handle,
     email: req.body.email,
     password: req.body.password,
   };
@@ -46,6 +50,15 @@ router.post("/register", (req, res) => {
         });
     });
   });
+});
+
+router.get("/:id", async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (user) {
+    res.status(200).json(req.query.get ? user[req.query.get] : user);
+  } else {
+    res.status(404).end();
+  }
 });
 
 router.post("/login", (req, res) => {
@@ -78,10 +91,14 @@ router.post("/login", (req, res) => {
   }).catch;
 });
 
-router.post("/edit", (req, res) => {
-  const userId = req.body.userId;
+router.put("/:id", (req, res) => {
+  // const { firstName, lastName, handle, email } = req.body;
 
-  User.findOne({ _id: userId })
+  User.findOneAndUpdate({ _id: req.user.id }, req.body, {
+    new: true,
+    runValidators: true,
+    context: "query ",
+  })
     .then((user) => {
       res.json(user);
     })
@@ -90,31 +107,31 @@ router.post("/edit", (req, res) => {
     });
 });
 
-router.post("/update", (req, res) => {
-  const formData = {
-    firstName: req.body.firstName,
-    lastName: req.body.lastName,
-    email: req.body.email,
-    password: req.body.password,
-    _id: req.body._id,
-  };
+// router.post("/update", (req, res) => {
+//   const formData = {
+//     firstName: req.body.firstName,
+//     lastName: req.body.lastName,
+//     email: req.body.email,
+//     password: req.body.password,
+//     _id: req.body._id,
+//   };
 
-  User.findOneAndUpdate({ _id: formData._id }, formData, {
-    new: true,
-  }).then((user) => {
-    res.json(user);
-  });
-});
+//   User.findOneAndUpdate({ _id: formData._id }, formData, {
+//     new: true,
+//   }).then((user) => {
+//     res.json(user);
+//   });
+// });
 
-router.post("/profile", (req, res) => {
+router.post("/profiles", (req, res) => {
   const profileData = {
     userId: req.body.userId,
-    profilePhoto: req.body.profilePhoto,
-    location: req.body.location,
-    occupation: req.body.occupation,
-    bio: req.body.bio,
-    cuisine: req.body.cuisine,
-    favoriteFood: req.body.favoriteFood,
+    // profilePhoto: req.body.profilePhoto,
+    // location: req.body.location,
+    // occupation: req.body.occupation,
+    // bio: req.body.bio,
+    // cuisine: req.body.cuisine,
+    // favoriteFood: req.body.favoriteFood,
   };
   const newUserProfile = new UserProfile(profileData);
   newUserProfile
@@ -127,17 +144,19 @@ router.post("/profile", (req, res) => {
     });
 });
 
-router.get("/:id/profile", (req, res) => {
+router.get("/:id/profile", async (req, res) => {
   const userId = req.params.id;
-
-  UserProfile.findOne({ userId }).then((profile) => {
-    res.status(200).json(profile);
-  });
+  const profile = await UserProfile.findOne({ userId });
+  if (profile) {
+    res.status(200).json(req.query.get ? profile[req.query.get] : profile);
+  } else {
+    res.status(404).end();
+  }
 });
 
-router.post("/profile/update", (req, res) => {
+router.put("/:id/profile", (req, res) => {
   const profileData = {
-    userId: req.body.userId,
+    userId: req.user.id,
     profilePhoto: req.body.profilePhoto,
     location: req.body.location,
     occupation: req.body.occupation,

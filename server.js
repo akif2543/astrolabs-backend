@@ -5,7 +5,7 @@ const morgan = require("morgan");
 const mongoose = require("mongoose");
 const passport = require("passport");
 const cors = require("cors");
-const UserRoutes = require("./routes/UserRoutes");
+const UsersRoutes = require("./routes/UsersRoutes");
 const FeedRoutes = require("./routes/FeedRoutes");
 const Post = require("./models/PostModel");
 
@@ -51,10 +51,10 @@ mongoose.set("useFindAndModify", false);
 //     });
 // });
 
-app.use("/user", UserRoutes);
+app.use("/users", UsersRoutes);
 
-app.post("/feed/post/all", (req, res) => {
-  const timestamp = req.body.timestamp;
+app.get("/feed/posts", (req, res) => {
+  const timestamp = req.query.date;
   const dateFilter = timestamp ? { date: { $lt: new Date(timestamp) } } : null;
 
   Post.find(dateFilter)

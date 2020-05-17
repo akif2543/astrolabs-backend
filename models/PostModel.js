@@ -33,10 +33,6 @@ const PostSchema = new Schema(
           type: mongoose.Schema.Types.ObjectId,
           required: true,
         },
-        userProfileId: {
-          type: mongoose.Schema.Types.ObjectId,
-          required: true,
-        },
         body: {
           type: String,
           required: true,
