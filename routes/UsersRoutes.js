@@ -1,6 +1,8 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const passport = require("passport");
+
 const User = require("../models/UserModel");
 const UserProfile = require("../models/ProfileModel");
 const Review = require("../models/ReviewModel");
@@ -9,15 +11,40 @@ require("dotenv").config();
 const router = express.Router();
 const secret = process.env.SECRET;
 
-router.get("/", async (req, res) => {
-  const users = await User.find();
-  if (users.length) {
-    const userNames = users.map((user) => user.userName);
-    res.status(200).json(userNames);
-  } else {
-    res.status(404).end();
+router.get(
+  "/profile",
+  passport.authenticate("jwt", { session: false }),
+  async (req, res) => {
+    const userId = req.user.id;
+    const profile = await UserProfile.findOne({ userId });
+
+    if (profile) {
+      res.status(200).json(req.query.get ? profile[req.query.get] : profile);
+    } else {
+      res.status(404).end();
+    }
   }
-});
+);
+
+router.get(
+  "/",
+  passport.authenticate("jwt", { session: false }),
+  async (req, res) => {
+    if (req.user) {
+      res.status(200).json(req.user.userName);
+    } else {
+      res.status(404).end();
+    }
+
+    // const users = await User.find();
+    // if (users.length) {
+    //   const userNames = users.map((user) => user.userName);
+    //   res.status(200).json(userNames);
+    // } else {
+    //   res.status(404).end();
+    // }
+  }
+);
 
 router.post("/", (req, res) => {
   const formData = {
@@ -154,7 +181,7 @@ router.get("/:id/profile", async (req, res) => {
   }
 });
 
-router.put("/:id/profile", (req, res) => {
+router.put("/profile", (req, res) => {
   const profileData = {
     userId: req.user.id,
     profilePhoto: req.body.profilePhoto,
