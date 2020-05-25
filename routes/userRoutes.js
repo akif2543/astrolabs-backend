@@ -11,28 +11,25 @@ const router = express.Router();
 const secret = process.env.SECRET;
 
 router.get(
-  "/profile",
-  passport.authenticate("jwt", { session: false }),
-  async (req, res) => {
-    const user = req.user.id;
-    const profile = await Profile.findOne({ user });
-
-    if (profile) {
-      res.status(200).json(req.query.get ? profile[req.query.get] : profile);
-    } else {
-      res.status(404).end();
-    }
-  }
-);
-
-router.get(
   "/",
   passport.authenticate("jwt", { session: false }),
-  async (req, res) => {
+  (req, res) => {
     if (req.user) {
-      res.status(200).json(req.user.name);
+      const user = req.user.id;
+
+      const opts = [
+        {
+          path: "user",
+          select: "handle photo firstName lastName -_id",
+        },
+      ];
+
+      Profile.findOne({ user })
+        .populate(opts)
+        .then((populated) => res.status(200).json(populated))
+        .catch((e) => res.status(500).json(e));
     } else {
-      res.status(404).end();
+      res.status(401).end();
     }
 
     // const users = await User.find();
@@ -72,44 +69,49 @@ router.post("/", async (req, res) => {
       const newProfile = new Profile({ user: savedUser._id });
       const savedProfile = await newProfile.save();
 
-      await Profile.findById(savedProfile._id)
-        .select("-_id -user")
-        .exec((erra, profile) => {
-          if (!erra) {
-            const user = {
-              name: savedUser.name,
-              handle: savedUser.handle,
-              profile,
-            };
-            jwt.sign(
-              { id: savedUser._id, handle: savedUser.handle },
-              secret,
-              (e, theJWT) => {
-                if (!err) {
-                  res.status(201).json({
-                    token: theJWT,
-                    user,
-                  });
-                } else {
-                  res.status(500).send(e);
-                }
+      const opts = [
+        {
+          path: "user",
+          select: "handle photo firstName lastName -_id",
+        },
+      ];
+
+      Profile.populate(savedProfile, opts)
+        .then((profile) => {
+          jwt.sign(
+            { id: savedUser._id, handle: savedUser.handle },
+            secret,
+            (e, theJWT) => {
+              if (!e) {
+                res.status(201).json({
+                  token: theJWT,
+                  profile,
+                });
+              } else {
+                res.status(500).send(e);
               }
-            );
-          } else {
-            console.log(erra);
-          }
-        });
+            }
+          );
+        })
+        .catch((e) => res.status(500).send(e));
     });
   });
 });
 
-router.get("/:id", async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (user) {
-    res.status(200).json(req.query.get ? user[req.query.get] : user);
-  } else {
-    res.status(404).end();
-  }
+router.get("/:handle", async (req, res) => {
+  const user = await User.findOne(req.params.handle)._id;
+
+  const opts = [
+    {
+      path: "user",
+      select: "handle photo firstName lastName -_id",
+    },
+  ];
+
+  Profile.findOne({ user })
+    .populate(opts)
+    .then((profile) => res.status(200).json(profile))
+    .catch((e) => res.status(404).json(e));
 });
 
 router.post("/login", async (req, res) => {
@@ -121,33 +123,32 @@ router.post("/login", async (req, res) => {
     const match = await bcrypt.compare(password, found.password);
 
     if (match) {
-      const payload = {
-        id: found._id,
-        handle: found.handle,
-      };
+      const opts = [
+        {
+          path: "user",
+          select: "handle photo firstName lastName -_id",
+        },
+      ];
 
       Profile.findOne({ user: found._id })
-        .select("-_id -user")
-        .exec((erra, profile) => {
-          if (!erra) {
-            const user = {
-              name: found.name,
-              handle: found.handle,
-              photo: found.photo,
-              profile,
-            };
-            jwt.sign(payload, secret, (err, theJWT) => {
-              if (!err) {
-                res.status(200).json({
+        .populate(opts)
+        .then((profile) => {
+          jwt.sign(
+            { id: found._id, handle: found.handle },
+            secret,
+            (e, theJWT) => {
+              if (!e) {
+                res.status(201).json({
                   token: theJWT,
-                  user,
+                  profile,
                 });
               } else {
-                res.status(500).send(err);
+                res.status(500).send(e);
               }
-            });
-          }
-        });
+            }
+          );
+        })
+        .catch((e) => res.status(500).send(e));
     } else {
       res.status(400).json({ error: "Invalid email or password" });
     }
@@ -156,77 +157,58 @@ router.post("/login", async (req, res) => {
   }
 });
 
-router.put("/:id", (req, res) => {
-  // const { firstName, lastName, handle, email } = req.body;
+router.put(
+  "/",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    const userData = {
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      handle: req.body.handle,
+    };
 
-  User.findOneAndUpdate({ _id: req.user.id }, req.body, {
-    new: true,
-    runValidators: true,
-    context: "query ",
-  })
-    .then((user) => {
-      res.json(user);
+    User.findOneAndUpdate({ _id: req.user.id }, userData, {
+      new: true,
+      runValidators: true,
+      context: "query ",
     })
-    .catch((err) => {
-      console.log("error", err);
-    });
-});
-
-// router.post("/update", (req, res) => {
-//   const formData = {
-//     firstName: req.body.firstName,
-//     lastName: req.body.lastName,
-//     email: req.body.email,
-//     password: req.body.password,
-//     _id: req.body._id,
-//   };
-
-//   User.findOneAndUpdate({ _id: formData._id }, formData, {
-//     new: true,
-//   }).then((user) => {
-//     res.json(user);
-//   });
-// });
-
-router.post("/profiles", (req, res) => {
-  const profileData = {
-    user: req.body.userId,
-  };
-  const newProfile = new Profile(profileData);
-  newProfile
-    .save()
-    .then((newProfileData) => {
-      res.json(newProfileData);
-    })
-    .catch((err) => {
-      console.log("error", err);
-    });
-});
-
-router.get("/:id/profile", async (req, res) => {
-  const user = req.params.id;
-  const profile = await Profile.findOne({ user });
-  if (profile) {
-    res.status(200).json(req.query.get ? profile[req.query.get] : profile);
-  } else {
-    res.status(404).end();
+      .select("handle photo firstName lastName -_id")
+      .then((user) => {
+        res.status(200).json(user);
+      })
+      .catch((e) => {
+        res.status(404).json(e);
+      });
   }
-});
+);
 
-router.put("/profile", (req, res) => {
-  const profileData = {
-    profilePhoto: req.body.profilePhoto,
-    location: req.body.location,
-    occupation: req.body.occupation,
-    bio: req.body.bio,
-    cuisine: req.body.cuisine,
-    favoriteFood: req.body.favoriteFood,
-  };
-  Profile.findOneAndUpdate({ user: req.user.id }, profileData, {
-    new: true,
-  }).then((profile) => {
-    res.json(profile);
-  });
-});
+router.put(
+  "/profile",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    const profileData = {
+      profilePhoto: req.body.profilePhoto,
+      location: req.body.location,
+      occupation: req.body.occupation,
+      bio: req.body.bio,
+      cuisine: req.body.cuisine,
+      favoriteFood: req.body.favoriteFood,
+    };
+
+    const opts = [
+      {
+        path: "user",
+        select: "handle photo firstName lastName -_id",
+      },
+    ];
+
+    Profile.findOneAndUpdate({ user: req.user.id }, profileData, {
+      new: true,
+    })
+      .populate(opts)
+      .then((profile) => res.status(200).json(profile))
+      .catch((e) => res.status(404).json(e));
+  }
+);
 
 module.exports = router;

@@ -127,25 +127,134 @@ router.put("/toggle", async (req, res) => {
       }
     }
 
-    const update = await Post.updateOne({ _id: postId }, { likes, shares });
-    res.status(200).json(update);
+    const opts = [
+      {
+        path: "author",
+        select: "handle photo firstName lastName -_id",
+      },
+      {
+        path: "likes",
+        select: "handle photo firstName lastName -_id",
+      },
+      {
+        path: "shares",
+        select: "handle photo firstName lastName -_id",
+      },
+      {
+        path: "comments.commenter",
+        select: "handle photo firstName lastName -_id",
+      },
+      {
+        path: "comments.likes",
+        select: "handle photo firstName lastName -_id",
+      },
+    ];
+
+    Post.updateOne({ _id: postId }, { likes, shares })
+      .populate(opts)
+      .then((updatedPost) => {
+        res.status(200).json(updatedPost);
+      })
+      .catch((e) => {
+        console.log(e);
+        res.status(500).end();
+      });
   } else {
     res.status(404).end();
   }
 });
 
-router.post("/post/:id/comment", async (req, res) => {
-  const commentData = {
+router.put("/comment", (req, res) => {
+  const comment = {
     commenter: req.user.id,
     body: req.body.body,
   };
 
-  const post = await Post.findOneAndUpdate(
-    { _id: req.params.id },
-    { $push: { comments: commentData } },
+  const { id } = req.body;
+
+  const opts = [
+    {
+      path: "author",
+      select: "handle photo firstName lastName -_id",
+    },
+    {
+      path: "likes",
+      select: "handle photo firstName lastName -_id",
+    },
+    {
+      path: "shares",
+      select: "handle photo firstName lastName -_id",
+    },
+    {
+      path: "comments.commenter",
+      select: "handle photo firstName lastName -_id",
+    },
+    {
+      path: "comments.likes",
+      select: "handle photo firstName lastName -_id",
+    },
+  ];
+
+  Post.findOneAndUpdate(
+    { _id: id },
+    { $push: { comments: comment } },
     { new: true }
-  );
-  res.json(post);
+  )
+    .populate(opts)
+    .then((post) => {
+      res.status(200).json(post);
+    })
+    .catch((e) => {
+      console.log(e);
+      res.status(404).end();
+    });
+});
+
+router.put("/comment/like", (req, res) => {
+  const userId = req.user.id;
+
+  const { postId, commentId } = req.body;
+
+  const opts = [
+    {
+      path: "author",
+      select: "handle photo firstName lastName -_id",
+    },
+    {
+      path: "likes",
+      select: "handle photo firstName lastName -_id",
+    },
+    {
+      path: "shares",
+      select: "handle photo firstName lastName -_id",
+    },
+    {
+      path: "comments.commenter",
+      select: "handle photo firstName lastName -_id",
+    },
+    {
+      path: "comments.likes",
+      select: "handle photo firstName lastName -_id",
+    },
+  ];
+
+  Post.findById(postId)
+    .then((post) => {
+      const comment = post.comments.id(commentId);
+      const { likes } = comment;
+      if (likes.includes(userId)) {
+        likes.splice(likes.indexOf(userId), 1);
+      } else {
+        likes.push(userId);
+      }
+      comment.set(likes);
+      post
+        .save()
+        .then((updatedPost) => Post.populate(updatedPost, opts))
+        .then((populatedPost) => res.status(200).send(populatedPost))
+        .catch((e) => res.status(500).json(e));
+    })
+    .catch((e) => res.status(404).json(e));
 });
 
 module.exports = router;
