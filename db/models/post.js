@@ -6,7 +6,7 @@ const PostSchema = new Schema(
   {
     author: {
       type: Schema.Types.ObjectId,
-      ref: "Profile",
+      ref: "User",
       required: true,
     },
     body: {
@@ -19,14 +19,14 @@ const PostSchema = new Schema(
     likes: [
       {
         type: Schema.Types.ObjectId,
-        ref: "Profile",
+        ref: "User",
         required: true,
       },
     ],
     shares: [
       {
         type: Schema.Types.ObjectId,
-        ref: "Profile",
+        ref: "User",
         required: true,
       },
     ],
@@ -34,7 +34,7 @@ const PostSchema = new Schema(
       {
         commenter: {
           type: Schema.Types.ObjectId,
-          ref: "Profile",
+          ref: "User",
           required: true,
         },
         body: {

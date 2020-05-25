@@ -9,12 +9,6 @@ const ProfileSchema = new Schema(
       ref: "User",
       required: true,
     },
-    photo: {
-      type: String,
-      required: true,
-      default:
-        "https://previews.123rf.com/images/alexwhite/alexwhite1609/alexwhite160904796/62625444-cook-flat-design-yellow-round-web-icon.jpg",
-    },
     location: {
       type: String,
       required: true,
@@ -36,20 +30,6 @@ const ProfileSchema = new Schema(
       type: String,
       default: "What are some of your favorite foods?",
     },
-    followers: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-      },
-    ],
-    following: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-      },
-    ],
   },
   { timestamps: true }
 );

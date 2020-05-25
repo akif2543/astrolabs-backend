@@ -1,11 +1,11 @@
+require("dotenv").config();
 const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const passport = require("passport");
 
-const User = require("../models/User");
-const Profile = require("../models/Profile");
-require("dotenv").config();
+const User = require("../db/models/user");
+const Profile = require("../db/models/profile");
 
 const router = express.Router();
 const secret = process.env.SECRET;
@@ -63,7 +63,7 @@ router.post("/", async (req, res) => {
     }
 
     bcrypt.hash(password, salt, async (error, hashedPassword) => {
-      if (err) {
+      if (error) {
         console.log("error is", error);
       }
       newUser.password = hashedPassword;
@@ -133,6 +133,7 @@ router.post("/login", async (req, res) => {
             const user = {
               name: found.name,
               handle: found.handle,
+              photo: found.photo,
               profile,
             };
             jwt.sign(payload, secret, (err, theJWT) => {
@@ -227,25 +228,5 @@ router.put("/profile", (req, res) => {
     res.json(profile);
   });
 });
-
-// router.post("/profile/review", (req, res) => {
-//   const reviewData = {
-//     firstName: req.body.firstName,
-//     profilePhoto: req.body.profilePhoto,
-//     rating: req.body.rating,
-//     review: req.body.review,
-//     eventTitle: req.body.eventTitle,
-//     eventDate: req.body.eventDate,
-//   };
-//   const newReview = new Review(reviewData);
-//   newReview
-//     .save()
-//     .then((newReviewData) => {
-//       res.json(newReviewData);
-//     })
-//     .catch((err) => {
-//       console.log("error", err);
-//     });
-// });
 
 module.exports = router;

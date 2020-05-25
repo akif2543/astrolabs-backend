@@ -28,6 +28,26 @@ const UserSchema = new Schema(
       type: String,
       required: true,
     },
+    photo: {
+      type: String,
+      required: true,
+      default:
+        "https://previews.123rf.com/images/alexwhite/alexwhite1609/alexwhite160904796/62625444-cook-flat-design-yellow-round-web-icon.jpg",
+    },
+    followers: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+      },
+    ],
+    following: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+      },
+    ],
   },
   {
     timestamps: true,
