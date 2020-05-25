@@ -7,7 +7,7 @@ const passport = require("passport");
 const cors = require("cors");
 const UsersRoutes = require("./routes/UsersRoutes");
 const FeedRoutes = require("./routes/FeedRoutes");
-const Post = require("./models/PostModel");
+const Post = require("./models/Post");
 
 const initPassportStrategy = require("./config/passport");
 

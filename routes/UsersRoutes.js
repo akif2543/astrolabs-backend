@@ -3,9 +3,8 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const passport = require("passport");
 
-const User = require("../models/UserModel");
-const UserProfile = require("../models/ProfileModel");
-const Review = require("../models/ReviewModel");
+const User = require("../models/User");
+const Profile = require("../models/Profile");
 require("dotenv").config();
 
 const router = express.Router();
@@ -15,8 +14,8 @@ router.get(
   "/profile",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
-    const userId = req.user.id;
-    const profile = await UserProfile.findOne({ userId });
+    const user = req.user.id;
+    const profile = await Profile.findOne({ user });
 
     if (profile) {
       res.status(200).json(req.query.get ? profile[req.query.get] : profile);
@@ -31,7 +30,7 @@ router.get(
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
     if (req.user) {
-      res.status(200).json(req.user.userName);
+      res.status(200).json(req.user.name);
     } else {
       res.status(404).end();
     }
@@ -46,34 +45,59 @@ router.get(
   }
 );
 
-router.post("/", (req, res) => {
+router.post("/", async (req, res) => {
   const formData = {
     firstName: req.body.firstName,
     lastName: req.body.lastName,
     handle: req.body.handle,
     email: req.body.email,
-    password: req.body.password,
   };
 
+  const { password } = req.body;
+
   const newUser = new User(formData);
+
   bcrypt.genSalt((err, salt) => {
     if (err) {
       console.log("error is", err);
     }
 
-    bcrypt.hash(newUser.password, salt, (err, hashedPassword) => {
+    bcrypt.hash(password, salt, async (error, hashedPassword) => {
       if (err) {
-        console.log("error is", err);
+        console.log("error is", error);
       }
       newUser.password = hashedPassword;
 
-      newUser
-        .save()
-        .then((newUserData) => {
-          res.json(newUserData);
-        })
-        .catch((err) => {
-          console.log("error", err);
+      const savedUser = await newUser.save();
+      const newProfile = new Profile({ user: savedUser._id });
+      const savedProfile = await newProfile.save();
+
+      await Profile.findById(savedProfile._id)
+        .select("-_id -user")
+        .exec((erra, profile) => {
+          if (!erra) {
+            const user = {
+              name: savedUser.name,
+              handle: savedUser.handle,
+              profile,
+            };
+            jwt.sign(
+              { id: savedUser._id, handle: savedUser.handle },
+              secret,
+              (e, theJWT) => {
+                if (!err) {
+                  res.status(201).json({
+                    token: theJWT,
+                    user,
+                  });
+                } else {
+                  res.status(500).send(e);
+                }
+              }
+            );
+          } else {
+            console.log(erra);
+          }
         });
     });
   });
@@ -88,34 +112,47 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.post("/login", (req, res) => {
-  const email = req.body.email;
-  const password = req.body.password;
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
 
-  User.findOne({ email: email }).then((theUser) => {
-    if (theUser) {
-      bcrypt.compare(password, theUser.password).then((isMatch) => {
-        if (isMatch) {
-          const payload = {
-            id: theUser.id,
-            email: theUser.email,
-            userName: theUser.userName,
-          };
-          jwt.sign(payload, secret, (err, theJWT) => {
-            res.json({
-              token: theJWT,
-              id: theUser.id,
-              userName: theUser.userName,
+  const found = await User.findOne({ email });
+
+  if (found) {
+    const match = await bcrypt.compare(password, found.password);
+
+    if (match) {
+      const payload = {
+        id: found._id,
+        handle: found.handle,
+      };
+
+      Profile.findOne({ user: found._id })
+        .select("-_id -user")
+        .exec((erra, profile) => {
+          if (!erra) {
+            const user = {
+              name: found.name,
+              handle: found.handle,
+              profile,
+            };
+            jwt.sign(payload, secret, (err, theJWT) => {
+              if (!err) {
+                res.status(200).json({
+                  token: theJWT,
+                  user,
+                });
+              } else {
+                res.status(500).send(err);
+              }
             });
-          });
-        } else {
-          res.json({ password: "Incorrect password" });
-        }
-      }).catch;
+          }
+        });
     } else {
-      res.json({ email: "Invalid email" });
+      res.status(400).json({ error: "Invalid email or password" });
     }
-  }).catch;
+  } else {
+    res.status(400).json({ error: "Invalid email or password" });
+  }
 });
 
 router.put("/:id", (req, res) => {
@@ -152,16 +189,10 @@ router.put("/:id", (req, res) => {
 
 router.post("/profiles", (req, res) => {
   const profileData = {
-    userId: req.body.userId,
-    // profilePhoto: req.body.profilePhoto,
-    // location: req.body.location,
-    // occupation: req.body.occupation,
-    // bio: req.body.bio,
-    // cuisine: req.body.cuisine,
-    // favoriteFood: req.body.favoriteFood,
+    user: req.body.userId,
   };
-  const newUserProfile = new UserProfile(profileData);
-  newUserProfile
+  const newProfile = new Profile(profileData);
+  newProfile
     .save()
     .then((newProfileData) => {
       res.json(newProfileData);
@@ -172,8 +203,8 @@ router.post("/profiles", (req, res) => {
 });
 
 router.get("/:id/profile", async (req, res) => {
-  const userId = req.params.id;
-  const profile = await UserProfile.findOne({ userId });
+  const user = req.params.id;
+  const profile = await Profile.findOne({ user });
   if (profile) {
     res.status(200).json(req.query.get ? profile[req.query.get] : profile);
   } else {
@@ -183,7 +214,6 @@ router.get("/:id/profile", async (req, res) => {
 
 router.put("/profile", (req, res) => {
   const profileData = {
-    userId: req.user.id,
     profilePhoto: req.body.profilePhoto,
     location: req.body.location,
     occupation: req.body.occupation,
@@ -191,31 +221,31 @@ router.put("/profile", (req, res) => {
     cuisine: req.body.cuisine,
     favoriteFood: req.body.favoriteFood,
   };
-  UserProfile.findOneAndUpdate({ userId: profileData.userId }, profileData, {
+  Profile.findOneAndUpdate({ user: req.user.id }, profileData, {
     new: true,
   }).then((profile) => {
     res.json(profile);
   });
 });
 
-router.post("/profile/review", (req, res) => {
-  const reviewData = {
-    firstName: req.body.firstName,
-    profilePhoto: req.body.profilePhoto,
-    rating: req.body.rating,
-    review: req.body.review,
-    eventTitle: req.body.eventTitle,
-    eventDate: req.body.eventDate,
-  };
-  const newReview = new Review(reviewData);
-  newReview
-    .save()
-    .then((newReviewData) => {
-      res.json(newReviewData);
-    })
-    .catch((err) => {
-      console.log("error", err);
-    });
-});
+// router.post("/profile/review", (req, res) => {
+//   const reviewData = {
+//     firstName: req.body.firstName,
+//     profilePhoto: req.body.profilePhoto,
+//     rating: req.body.rating,
+//     review: req.body.review,
+//     eventTitle: req.body.eventTitle,
+//     eventDate: req.body.eventDate,
+//   };
+//   const newReview = new Review(reviewData);
+//   newReview
+//     .save()
+//     .then((newReviewData) => {
+//       res.json(newReviewData);
+//     })
+//     .catch((err) => {
+//       console.log("error", err);
+//     });
+// });
 
 module.exports = router;

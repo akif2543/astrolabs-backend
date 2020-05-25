@@ -1,13 +1,13 @@
 const mongoose = require("mongoose");
 const uniqueValidator = require("mongoose-unique-validator");
 
-const Schema = mongoose.Schema;
+const { Schema } = mongoose;
 
 const UserSchema = new Schema(
   {
     firstName: {
       type: String,
-      require: true,
+      required: true,
     },
     lastName: {
       type: String,
@@ -28,16 +28,9 @@ const UserSchema = new Schema(
       type: String,
       required: true,
     },
-    date: {
-      type: Date,
-      default: Date.now,
-    },
   },
   {
     timestamps: true,
-    toObject: {
-      virtuals: true,
-    },
     toJSON: {
       virtuals: true,
     },
@@ -46,9 +39,9 @@ const UserSchema = new Schema(
 
 UserSchema.plugin(uniqueValidator);
 
-UserSchema.virtual("userName").get(function () {
-  return this.firstName + " " + this.lastName;
+UserSchema.virtual("name").get(function () {
+  return `${this.firstName} ${this.lastName}`;
 });
 
-const User = mongoose.model("user", UserSchema);
+const User = mongoose.model("User", UserSchema);
 module.exports = User;
