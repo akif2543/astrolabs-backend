@@ -1,14 +1,79 @@
 require("dotenv").config();
 const express = require("express");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 const passport = require("passport");
 
 const User = require("../db/models/user");
 const Profile = require("../db/models/profile");
+const { profPop, userSelect } = require("../util/query_helper");
+const {
+  comparePasswords,
+  getJWT,
+  hashPassword,
+} = require("../util/auth_helper");
 
 const router = express.Router();
-const secret = process.env.SECRET;
+
+router.get("/:handle", async (req, res) => {
+  const user = await User.findOne(req.params.handle)._id;
+
+  Profile.findOne({ user })
+    .populate(profPop)
+    .then((profile) => res.status(200).json(profile))
+    .catch((e) => res.status(404).json(e));
+});
+
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  const found = await User.findOne({ email });
+
+  if (found) {
+    const match = await comparePasswords(password, found.password);
+
+    if (match) {
+      Profile.findOne({ user: found._id })
+        .populate(profPop)
+        .then((profile) => {
+          const token = getJWT(found._id, found.handle);
+          if (token) {
+            res.status(201).json({
+              token,
+              profile,
+            });
+          } else {
+            res.status(500).end();
+          }
+        })
+        .catch((e) => res.status(500).send(e));
+    } else {
+      res.status(400).json({ error: "Invalid email or password" });
+    }
+  } else {
+    res.status(400).json({ error: "Invalid email or password" });
+  }
+});
+
+router.put(
+  "/profile",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    const profileData = {
+      profilePhoto: req.body.profilePhoto,
+      location: req.body.location,
+      occupation: req.body.occupation,
+      bio: req.body.bio,
+      cuisine: req.body.cuisine,
+      favoriteFood: req.body.favoriteFood,
+    };
+
+    Profile.findOneAndUpdate({ user: req.user.id }, profileData, {
+      new: true,
+    })
+      .populate(profPop)
+      .then((profile) => res.status(200).json(profile))
+      .catch((e) => res.status(404).json(e));
+  }
+);
 
 router.get(
   "/",
@@ -17,28 +82,13 @@ router.get(
     if (req.user) {
       const user = req.user.id;
 
-      const opts = [
-        {
-          path: "user",
-          select: "handle photo firstName lastName -_id",
-        },
-      ];
-
       Profile.findOne({ user })
-        .populate(opts)
+        .populate(profPop)
         .then((populated) => res.status(200).json(populated))
         .catch((e) => res.status(500).json(e));
     } else {
       res.status(401).end();
     }
-
-    // const users = await User.find();
-    // if (users.length) {
-    //   const userNames = users.map((user) => user.userName);
-    //   res.status(200).json(userNames);
-    // } else {
-    //   res.status(404).end();
-    // }
   }
 );
 
@@ -54,107 +104,25 @@ router.post("/", async (req, res) => {
 
   const newUser = new User(formData);
 
-  bcrypt.genSalt((err, salt) => {
-    if (err) {
-      console.log("error is", err);
-    }
+  newUser.password = hashPassword(password);
 
-    bcrypt.hash(password, salt, async (error, hashedPassword) => {
-      if (error) {
-        console.log("error is", error);
+  const savedUser = await newUser.save();
+  const newProfile = new Profile({ user: savedUser._id });
+  const savedProfile = await newProfile.save();
+
+  Profile.populate(savedProfile, profPop)
+    .then((profile) => {
+      const token = getJWT(savedUser._id, savedUser.handle);
+      if (token) {
+        res.status(201).json({
+          token,
+          profile,
+        });
+      } else {
+        res.status(500).end();
       }
-      newUser.password = hashedPassword;
-
-      const savedUser = await newUser.save();
-      const newProfile = new Profile({ user: savedUser._id });
-      const savedProfile = await newProfile.save();
-
-      const opts = [
-        {
-          path: "user",
-          select: "handle photo firstName lastName -_id",
-        },
-      ];
-
-      Profile.populate(savedProfile, opts)
-        .then((profile) => {
-          jwt.sign(
-            { id: savedUser._id, handle: savedUser.handle },
-            secret,
-            (e, theJWT) => {
-              if (!e) {
-                res.status(201).json({
-                  token: theJWT,
-                  profile,
-                });
-              } else {
-                res.status(500).send(e);
-              }
-            }
-          );
-        })
-        .catch((e) => res.status(500).send(e));
-    });
-  });
-});
-
-router.get("/:handle", async (req, res) => {
-  const user = await User.findOne(req.params.handle)._id;
-
-  const opts = [
-    {
-      path: "user",
-      select: "handle photo firstName lastName -_id",
-    },
-  ];
-
-  Profile.findOne({ user })
-    .populate(opts)
-    .then((profile) => res.status(200).json(profile))
-    .catch((e) => res.status(404).json(e));
-});
-
-router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-
-  const found = await User.findOne({ email });
-
-  if (found) {
-    const match = await bcrypt.compare(password, found.password);
-
-    if (match) {
-      const opts = [
-        {
-          path: "user",
-          select: "handle photo firstName lastName -_id",
-        },
-      ];
-
-      Profile.findOne({ user: found._id })
-        .populate(opts)
-        .then((profile) => {
-          jwt.sign(
-            { id: found._id, handle: found.handle },
-            secret,
-            (e, theJWT) => {
-              if (!e) {
-                res.status(201).json({
-                  token: theJWT,
-                  profile,
-                });
-              } else {
-                res.status(500).send(e);
-              }
-            }
-          );
-        })
-        .catch((e) => res.status(500).send(e));
-    } else {
-      res.status(400).json({ error: "Invalid email or password" });
-    }
-  } else {
-    res.status(400).json({ error: "Invalid email or password" });
-  }
+    })
+    .catch((e) => res.status(500).send(e));
 });
 
 router.put(
@@ -172,42 +140,13 @@ router.put(
       runValidators: true,
       context: "query ",
     })
-      .select("handle photo firstName lastName -_id")
+      .select(userSelect)
       .then((user) => {
         res.status(200).json(user);
       })
       .catch((e) => {
         res.status(404).json(e);
       });
-  }
-);
-
-router.put(
-  "/profile",
-  passport.authenticate("jwt", { session: false }),
-  (req, res) => {
-    const profileData = {
-      profilePhoto: req.body.profilePhoto,
-      location: req.body.location,
-      occupation: req.body.occupation,
-      bio: req.body.bio,
-      cuisine: req.body.cuisine,
-      favoriteFood: req.body.favoriteFood,
-    };
-
-    const opts = [
-      {
-        path: "user",
-        select: "handle photo firstName lastName -_id",
-      },
-    ];
-
-    Profile.findOneAndUpdate({ user: req.user.id }, profileData, {
-      new: true,
-    })
-      .populate(opts)
-      .then((profile) => res.status(200).json(profile))
-      .catch((e) => res.status(404).json(e));
   }
 );
 
