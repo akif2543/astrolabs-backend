@@ -1,8 +1,8 @@
 const express = require("express");
 const passport = require("passport");
 
-const userRoutes = require("./userRoutes");
-const feedRoutes = require("./feedRoutes");
+const userRoutes = require("./user_routes");
+const feedRoutes = require("./feed_routes");
 
 const router = express.Router();
 

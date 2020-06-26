@@ -1,6 +1,8 @@
 require("dotenv").config();
 const express = require("express");
 const passport = require("passport");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
 const User = require("../db/models/user");
 const Profile = require("../db/models/profile");
@@ -11,14 +13,22 @@ const {
   hashPassword,
 } = require("../util/auth_helper");
 
+const secret = process.env.SECRET;
+
 const router = express.Router();
 
-router.get("/:handle", async (req, res) => {
-  const user = await User.findOne(req.params.handle)._id;
-
-  Profile.findOne({ user })
-    .populate(profPop)
-    .then((profile) => res.status(200).json(profile))
+router.get("/:handle", (req, res) => {
+  User.findOne(req.params)
+    .then((user) => {
+      if (user) {
+        Profile.findOne({ user })
+          .populate(profPop)
+          .then((profile) => res.status(200).json(profile))
+          .catch((e) => res.status(404).json(e));
+      } else {
+        res.status(404).end();
+      }
+    })
     .catch((e) => res.status(404).json(e));
 });
 
@@ -34,15 +44,17 @@ router.post("/login", async (req, res) => {
       Profile.findOne({ user: found._id })
         .populate(profPop)
         .then((profile) => {
-          const token = getJWT(found._id, found.handle);
-          if (token) {
-            res.status(201).json({
-              token,
-              profile,
-            });
-          } else {
-            res.status(500).end();
-          }
+          const payload = { id: found._id, handle: found.handle };
+          jwt.sign(payload, secret, (err, token) => {
+            if (token) {
+              res.status(201).json({
+                token,
+                profile,
+              });
+            } else {
+              res.status(500).end();
+            }
+          });
         })
         .catch((e) => res.status(500).send(e));
     } else {
@@ -100,29 +112,62 @@ router.post("/", async (req, res) => {
     email: req.body.email,
   };
 
+  //req.params.id
   const { password } = req.body;
-
   const newUser = new User(formData);
 
-  newUser.password = hashPassword(password);
+  bcrypt.genSalt((err, salt) => {
+    if (err) {
+      console.log("error is", err);
+    }
 
-  const savedUser = await newUser.save();
-  const newProfile = new Profile({ user: savedUser._id });
-  const savedProfile = await newProfile.save();
-
-  Profile.populate(savedProfile, profPop)
-    .then((profile) => {
-      const token = getJWT(savedUser._id, savedUser.handle);
-      if (token) {
-        res.status(201).json({
-          token,
-          profile,
-        });
-      } else {
-        res.status(500).end();
+    bcrypt.hash(password, salt, async (error, hashedPassword) => {
+      if (error) {
+        console.log("error is", error);
       }
-    })
-    .catch((e) => res.status(500).send(e));
+      newUser.password = hashedPassword;
+
+      const savedUser = await newUser.save();
+      const newProfile = new Profile({ user: savedUser._id });
+      const savedProfile = await newProfile.save();
+
+      Profile.populate(savedProfile, profPop)
+        .then((profile) => {
+          const payload = { id: savedUser._id, handle: savedUser.handle };
+          jwt.sign(payload, secret, (err, token) => {
+            if (token) {
+              res.status(201).json({
+                token,
+                profile,
+              });
+            } else {
+              res.status(500).end();
+            }
+          });
+        })
+        .catch((e) => res.status(500).send(e));
+    });
+  });
+
+  // newUser.password = await hashPassword(password);
+
+  // const savedUser = await newUser.save();
+  // const newProfile = new Profile({ user: savedUser._id });
+  // const savedProfile = await newProfile.save();
+
+  // Profile.populate(savedProfile, profPop)
+  //   .then((profile) => {
+  //     const token = getJWT(savedUser._id, savedUser.handle);
+  //     if (token) {
+  //       res.status(201).json({
+  //         token,
+  //         profile,
+  //       });
+  //     } else {
+  //       res.status(500).end();
+  //     }
+  //   })
+  //   .catch((e) => res.status(500).send(e));
 });
 
 router.put(

@@ -1,4 +1,5 @@
 const express = require("express");
+
 const Post = require("../db/models/post");
 const { postPop } = require("../util/query_helper");
 

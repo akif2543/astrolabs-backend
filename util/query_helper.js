@@ -1,6 +1,6 @@
 const USER_SELECT = "handle photo firstName lastName -_id";
 
-export default {
+const queryHelper = {
   profPop: [
     {
       path: "user",
@@ -31,3 +31,5 @@ export default {
     },
   ],
 };
+
+module.exports = queryHelper;
